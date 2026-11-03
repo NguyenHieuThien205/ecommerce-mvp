@@ -21,6 +21,13 @@ router.get('/:uid', ah(async (req, res) => {
   res.json(await call(clients.customer, 'GetCustomer', { uid }));
 }));
 
+// Bổ sung ngoài Spec: xem hạng thành viên (mname, score) - dùng cho TC-CUS-04. Khách chỉ xem của mình, Admin xem tất cả
+router.get('/:uid/membership', ah(async (req, res) => {
+  const uid = intId(req.params.uid);
+  assertOwnerOrAdmin(req, uid);
+  res.json(await call(clients.customer, 'GetMembership', { uid }));
+}));
+
 // API-CUS-02 (đổi hạng thành viên `mid` do Customer Service giới hạn cho Admin)
 router.put('/:uid', ah(async (req, res) => {
   const uid = intId(req.params.uid);

@@ -50,6 +50,14 @@ async function login(username, password) {
   const ready = await until(() => req('GET', `/api/customers/${A.uid}`, { token: A.token }));
   check('Customer của khách A tự được tạo qua Kafka', ready.status === 200, d(ready));
 
+  // TC-CUS-04: hạng thành viên mặc định của khách mới
+  r = await req('GET', `/api/customers/${A.uid}/membership`, { token: A.token });
+  check('TC-CUS-04 lấy Membership của khách mới: BRONZE, score 0', r.status === 200 && r.body.mname === 'BRONZE' && r.body.score === 0 && r.body.mid === 1, d(r));
+  r = await req('GET', `/api/customers/${A.uid}/membership`, { token: B.token });
+  check('Khách B xem Membership của khách A -> 403', r.status === 403, d(r));
+  r = await req('GET', `/api/customers/${A.uid}/membership`);
+  check('Xem Membership không có token -> 401', r.status === 401, d(r));
+
   // Sản phẩm riêng cho bài test
   r = await req('POST', '/api/products', { token: admin, body: { pname: `E2E Item ${tag}`, price: 40, quantity: 5 } });
   const pid = r.body?.pid;
@@ -104,6 +112,20 @@ async function login(username, password) {
   check('Đặt quá tồn kho -> 409', r.status === 409, d(r));
   r = await req('GET', `/api/products/${pid}`, { token: A.token });
   check('Kho vẫn là 3 sau lần đặt thất bại', r.status === 200 && r.body.quantity === 3, d(r));
+
+  // TC-ORD-04: discount theo hạng (BRONZE 0% đã kiểm ở trên; sản phẩm giá 40, kho còn 3)
+  r = await req('PUT', `/api/customers/${A.uid}`, { token: admin, body: { mid: 2 } });
+  check('Admin nâng khách A lên SILVER -> 200', r.status === 200, d(r));
+  r = await req('GET', `/api/customers/${A.uid}/membership`, { token: A.token });
+  check('Membership: SILVER, score 100', r.status === 200 && r.body.mname === 'SILVER' && r.body.score === 100, d(r));
+  r = await req('POST', '/api/orders', { token: A.token, body: { items: [{ pid, qty: 1 }] } });
+  check('TC-ORD-04 SILVER -> giảm 5%, tổng 38', r.status === 201 && r.body.discount === 5 && r.body.total_amount === 38, d(r));
+  r = await req('PUT', `/api/customers/${A.uid}`, { token: admin, body: { mid: 3 } });
+  check('Admin nâng khách A lên GOLD -> 200', r.status === 200, d(r));
+  r = await req('GET', `/api/customers/${A.uid}/membership`, { token: A.token });
+  check('Membership: GOLD, score 500', r.status === 200 && r.body.mname === 'GOLD' && r.body.score === 500, d(r));
+  r = await req('POST', '/api/orders', { token: A.token, body: { items: [{ pid, qty: 1 }] } });
+  check('TC-ORD-04 GOLD -> giảm 10%, tổng 36', r.status === 201 && r.body.discount === 10 && r.body.total_amount === 36, d(r));
 
   console.log(`\n${passed}/${total} đạt`);
   process.exit(passed === total ? 0 : 1);

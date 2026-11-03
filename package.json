@@ -1,5 +1,8 @@
 {
   "name": "ecommerce-mvp",
   "private": true,
-  "workspaces": ["libs/*", "services/*"]
+  "workspaces": ["libs/*", "services/*"],
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
 }

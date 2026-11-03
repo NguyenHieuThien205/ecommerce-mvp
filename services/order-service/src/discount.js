@@ -7,7 +7,9 @@ const TIERS = [
 ];
 
 function discountForScore(score) {
-  const tier = TIERS.find((t) => score >= t.minScore);
+  const s = Number(score);
+  if (isNaN(s) || s < 0) return 0;
+  const tier = TIERS.find((t) => s >= t.minScore);
   return tier ? tier.percent : 0;
 }
 
